@@ -1,69 +1,84 @@
 Titan Secure Volume
 ===================
 
+Introduction
+------------
+
+A Titan Secure Volume is an encrypted and authenticated block device.  It is designed for use by the Titan Device, but should be flexible enough to find use in other applications.  Each block (called Sector in TSV) is processed individually, Encrypt-then-MAC, and uses a Sector specific Tweak on both the encryption and the authentication to frustrate modification of the volume by an attacker.
+
+Sector size is specified when the volume is created, allowing the volume to be adapted to the underlying storage block size, and the application's performance characteristics.  Larger sectors use more RAM, but require less frequent cipher passes if disk access is coalesced.  Smaller sectors use less RAM, but require less frequency cipher passes if disk access is fragmented.
+
+The volume consists of a Header, a MAC table, and then the Sectors.  Everything is either encrypted data, MAC tags, or random data.  Therefore, the entire TSV is indistinguishable from noise without its associated keys.
+
+Titan Secure Volume can store a theoretical maximum of ~16 exbibytes of data (Sector Size: 0xFFFFFFFF, Sector Count: 0xFFFFFFFF).
+
+
 
 Data Format
 -----------
 
-
-Always starts with a Volume Header, followed by a MAC Table, followed by 0 or more Sectors.
-
-Everything is aligned to sector size.
-
-Everything written to the storage device is either encrypted data, or hashes, including headers and other structures.  Without the Cipher Keys, everything will look like random data, and an attacker can never be sure the storage device even contains a Titan Secure Volume.
+Always starts with a Volume Header, padded to 1 Sector.  Followed by a MAC Table, padded to a multiple of Sector Size.  Finally, 0 or more Sectors.
 
 All structures in a Titan Secture Volume follow the Encrypt-then-MAC pattern.  Data should always be authenticated before being fed into the decryption function(s).
 
 All integer values are stored little endian.
 
-The Volume Header and Sectors are authenticated using their associated MAC tags.  The MAC tag is calculated like so:
-	tag = MAC (MAC Key, data || sector)
-
-where data is the (encrypted) data being authenticated, and sector is a 32-bit sector number (little endian).  The Volume Header is considered sector 0.  Thus, the first data Sector is considered sector 1.
+The Volume Header and Sectors are authenticated using their associated MAC tags.  MAC should be tweaked using sector number, where the header is considered tweak 0, and the first sector is tweak 1.  The same tweak values apply to encryption.
 
 
-Version 0x0100 uses the following functions:
-	* Authentication: HMAC-SHA-256
-	* Encryption: Threefish-512-XTS
-		- Volume Header is Sector 0.
-		- Sectors are Sector [1..Sector Count]
+
+Cryptography
+------------
+
+Since the Volume Header is encrypted, there is no way to specify the cipher suite in use by a volume.  Support for different cipher suites (Encryption function + Authentication function) is achieved by attempting to read the header using all possible cipher suites.  If all fail, either the keys are wrong, the volume is either not a TSV, the volume is corrupted, or the volume uses an unknown cipher suite.  Below are listed the officially "supported" cipher suites.
 
 
-Cipher Keys:
-	* 64  binary    MAC Key
-	* 64  binary    Encryption Key
+Version 0x0100:
+	* Suite Threefish-512-XTS:HMAC-SHA-256
+		- 64 byte MAC Key
+		- 64 byte Encryption Key
+		- Authentication: HMAC-SHA-256
+		- Encryption: Threefish-512-XTS
+		- tag = MAC (MAC Key, data || tweak)
+		- Volume Header Tweak is 0.
+		- Sector Tweak is Sector Number + 1 (first sector's tweak is 1).
+	
+Version 0x0100 supports only Threefish.  Threefish-512-XTS was chosen for its modern approach, simplicity of the algorithm, resistance to side channel attacks, and native support for Tweaks.
 
+
+Support for integrity checks can be tacked on to a TSV by including a HASH of its header (Encrypt-then-MAC-then-HASH).  This would allow a library to differentiate between a corrupted volume and bad keys.  Of course, this defeats the indistinguishable (from noise) property of a native TSV.
+
+
+
+Data Structures
+---------------
 
 Volume Header:
 	* 8   string    "TITANTSV"
 	* 2   uint16    Version (0x0100)
-	* 32  string    Cipher Suite (e.g. "Threefish-512-XTS-HMAC-SHA-256"; Padded to length with 0)
 	* 4   uint32    Sector Size in bytes
 	* 4   uint32    Sector Count
-	* 14            Padding (Make Header Multiple of Encryption Block Size)
+	* 46            Padding (Make Header Data Multiple of 64)
 	* 32  binary    MAC tag
 	* *             Padding (Make Header Multiple of Sector Size)
 
-The Volume Header, excluding MAC tag and the last Padding, should be a multiple of the Encryption Block Size (64 bytes).
-The Volume Header, including MAC tag and the last Padding, should be a multiple of the Sector Size.
+The Volume Header, including MAC tag and the last Padding, must be 1 Sector in size.
 The MAC tag authenticates the entire header, except for the last Padding and the MAC tag itself.
-Padding should be filled with random data.
+Padding must be filled with random data.
 The first Padding is encrypted, but the last Padding is not.
-Cipher Suite can be:
-	Threefish-512-XTS-HMAC-SHA-256
 
 
 MAC Table:
-	* 32*Sector Count   binary    MAC tag(s)
-	* *                           Padding
+	* Tag Size*Sector Count   binary    MAC tag(s)
+	* *                                 Padding
 
-The MAC Table follows the Volume Header, and should be padded such that its length is a multiple of Sector Size.
+The MAC Table follows the Volume Header, and must be padded such that its length is a multiple of Sector Size.
 The MAC Table has no associated MAC tag, as it is not necessary to authenticate the MAC tags themselves.
 The MAC Table is not encrypted.
-The Padding should be filled with random data.
+The Padding must be filled with random data.
 
 
 Sector:
-	* 1*Sector Size   binary    Data
+	* 1*Sector Size           binary    Data
 
-The Sector is associated with a MAC tag using the MAC Table.  The first sector cooresponds with the first MAC tag in the MAC Table, and so on.
+The Sector is associated with a MAC tag using the MAC Table.  The first sector corresponds with the first MAC tag in the MAC Table, and so on.
