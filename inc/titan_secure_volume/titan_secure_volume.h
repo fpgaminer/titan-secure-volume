@@ -25,5 +25,8 @@ int tsv_write (uint64_t offset, void const *src, size_t len);
 /* */
 int tsv_flush (void);
 
+/* */
+int tsv_close (void);
+
 
 #endif
