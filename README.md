@@ -36,6 +36,7 @@ Since the Volume Header is encrypted, there is no way to specify the cipher suit
 
 
 Version 0x0100:
+
 	* Suite Threefish-512-XTS:HMAC-SHA-256
 		- 64 byte MAC Key
 		- 64 byte Encryption Key
@@ -56,6 +57,7 @@ Data Structures
 ---------------
 
 Volume Header:
+
 	* 8   string    "TITANTSV"
 	* 2   uint16    Version (0x0100)
 	* 4   uint32    Sector Size in bytes
@@ -71,6 +73,7 @@ The first Padding is encrypted, but the last Padding is not.
 
 
 MAC Table:
+
 	* Tag Size*Sector Count   binary    MAC tag(s)
 	* *                                 Padding
 
@@ -81,6 +84,7 @@ The Padding must be filled with random data.
 
 
 Sector:
+
 	* 1*Sector Size           binary    Data
 
 The Sector is associated with a MAC tag using the MAC Table.  The first sector corresponds with the first MAC tag in the MAC Table, and so on.
