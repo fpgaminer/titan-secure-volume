@@ -84,7 +84,7 @@ static int sanity_check_parameters (uint32_t sector_size, uint32_t sector_count)
 }
 
 
-int tsv_create (uint8_t mac_key[static TSV_MAC_KEY_SIZE], uint8_t encryption_key[static TSV_ENCRYPTION_KEY_SIZE], uint32_t sector_size, uint32_t sector_count)
+int tsv_create (uint8_t const mac_key[static TSV_MAC_KEY_SIZE], uint8_t const encryption_key[static TSV_ENCRYPTION_KEY_SIZE], uint32_t sector_size, uint32_t sector_count)
 {
 	int err;
 	PACKED_TSV_HEADER *const header_buffer = (PACKED_TSV_HEADER *)g_volume.buffer;
@@ -165,7 +165,7 @@ int tsv_create (uint8_t mac_key[static TSV_MAC_KEY_SIZE], uint8_t encryption_key
 }
 
 
-int tsv_open (uint8_t mac_key[static TSV_MAC_KEY_SIZE], uint8_t encryption_key[static TSV_ENCRYPTION_KEY_SIZE])
+int tsv_open (uint8_t const mac_key[static TSV_MAC_KEY_SIZE], uint8_t const encryption_key[static TSV_ENCRYPTION_KEY_SIZE])
 {
 	PACKED_TSV_HEADER *const header_buffer = (PACKED_TSV_HEADER *)g_volume.buffer;
 	uint8_t calculated_mac[MAC_TAG_SIZE];
