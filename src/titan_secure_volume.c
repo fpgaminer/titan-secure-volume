@@ -222,11 +222,10 @@ static int _read_sector (void *dst, uint32_t sector_num)
 
 	if (sector_num & 0x80000000)
 		offset += g_volume.mac_table_size + g_volume.volume_size;
-	sector_num &= 0x7FFFFFFF;
 
 	/* Read sector */
-	RtnOnError (tsv_physical_read (dst, offset + g_volume.mac_table_size + (uint64_t)sector_num * (uint64_t)g_volume.sector_size, g_volume.sector_size));
-	RtnOnError (tsv_physical_read (mac, offset + (uint64_t)sector_num * (uint64_t)MAC_TAG_SIZE, MAC_TAG_SIZE));
+	RtnOnError (tsv_physical_read (dst, offset + g_volume.mac_table_size + (uint64_t)(sector_num & 0x7FFFFFFF) * (uint64_t)g_volume.sector_size, g_volume.sector_size));
+	RtnOnError (tsv_physical_read (mac, offset + (uint64_t)(sector_num & 0x7FFFFFFF) * (uint64_t)MAC_TAG_SIZE, MAC_TAG_SIZE));
 
 	/* Authenticate */
 	_volume_mac (calculated_mac, g_volume.mac_key, dst, g_volume.sector_size, sector_num + 1);
@@ -236,6 +235,32 @@ static int _read_sector (void *dst, uint32_t sector_num)
 
 	/* Decrypt */
 	_volume_decrypt (dst, g_volume.encryption_key, dst, g_volume.sector_size, sector_num + 1);
+
+	return 0;
+}
+
+
+static int _write_sector (uint32_t sector_num, void *src)
+{
+	uint8_t calculated_mac[MAC_TAG_SIZE];
+	uint64_t offset = g_volume.sector_size;
+
+	if (!g_volume.open || (sector_num & 0x7FFFFFFF) >= g_volume.sector_count)
+		return -1;
+
+	/* Encrypt */
+	_volume_encrypt (src, g_volume.encryption_key, src, g_volume.sector_size, sector_num + 1);
+
+	/* MAC */
+	_volume_mac (calculated_mac, g_volume.mac_key, src, g_volume.sector_size, sector_num + 1);
+
+	if (sector_num & 0x80000000)
+		offset += g_volume.mac_table_size + g_volume.volume_size;
+	sector_num &= 0x7FFFFFFF;
+
+	/* Write */
+	RtnOnError (tsv_physical_write (offset + g_volume.mac_table_size + (uint64_t)sector_num * (uint64_t)g_volume.sector_size, src, g_volume.sector_size));
+	RtnOnError (tsv_physical_write (offset + (uint64_t)sector_num * (uint64_t)MAC_TAG_SIZE, calculated_mac, MAC_TAG_SIZE));
 
 	return 0;
 }
@@ -286,8 +311,6 @@ int tsv_read (void *dst, uint64_t offset, size_t len)
 
 int tsv_write (uint64_t offset, void const *src, size_t len)
 {
-	uint8_t calculated_mac_tag[MAC_TAG_SIZE];
-
 	if (!g_volume.open)
 		return -1;
 
@@ -307,7 +330,7 @@ int tsv_write (uint64_t offset, void const *src, size_t len)
 
 		/* Read the sector if this is a partial write */
 		/* During partial writes, we should overwrite damaged sectors first */
-		uint64_t t_offset = g_volume.sector_size;
+		uint32_t t_sector_num = sector_num;
 
 		if (write_len != g_volume.sector_size)
 		{
@@ -320,30 +343,20 @@ int tsv_write (uint64_t offset, void const *src, size_t len)
 			{
 				/* If first replication is valid, overwrite the second first.
  				 * This way, if the second is invalid, we overwrite that first. */
-				t_offset += g_volume.mac_table_size + g_volume.volume_size;
+				t_sector_num |= 0x80000000;
 			}
 		}
 
 		/* Modify */
 		memmove (g_volume.buffer+sector_offset, src, write_len);
 
-		/* Encrypt */
-		_volume_encrypt (g_volume.buffer, g_volume.encryption_key, g_volume.buffer, g_volume.sector_size, sector_num + 1);
+		/* Write first sector */
+		RtnOnError (_write_sector (t_sector_num, g_volume.buffer));
 
-		/* MAC */
-		_volume_mac (calculated_mac_tag, g_volume.mac_key, g_volume.buffer, g_volume.sector_size, sector_num + 1);
-
-		/* Write */
-		for (int i = 0; i < 2; ++i)
-		{
-			RtnOnError (tsv_physical_write (t_offset + g_volume.mac_table_size + (uint64_t)sector_num * (uint64_t)g_volume.sector_size, g_volume.buffer, g_volume.sector_size));
-			RtnOnError (tsv_physical_write (t_offset + (uint64_t)sector_num * (uint64_t)MAC_TAG_SIZE, calculated_mac_tag, MAC_TAG_SIZE));
-
-			if (t_offset == g_volume.sector_size)
-				t_offset += g_volume.mac_table_size + g_volume.volume_size;
-			else
-				t_offset -= g_volume.mac_table_size + g_volume.volume_size;
-		}
+		/* Writer other sector */
+		_volume_decrypt (g_volume.buffer, g_volume.encryption_key, g_volume.buffer, g_volume.sector_size, t_sector_num + 1);
+		t_sector_num ^= 0x80000000;
+		RtnOnError (_write_sector (t_sector_num, g_volume.buffer));
 
 		sector_offset = 0;
 		src = ((uint8_t const *)src) + write_len;
