@@ -29,4 +29,8 @@ int tsv_flush (void);
 int tsv_close (void);
 
 
+/* */
+uint64_t tsv_get_size (void);
+
+
 #endif

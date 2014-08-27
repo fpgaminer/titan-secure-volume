@@ -384,3 +384,9 @@ int tsv_close (void)
 
 	return 0;
 }
+
+
+uint64_t tsv_get_size (void)
+{
+	return g_volume.volume_size;
+}
