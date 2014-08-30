@@ -18,7 +18,7 @@ COMPILE_FLAGS += -Wno-missing-braces
 RCOMPILE_FLAGS = -O3
 DCOMPILE_FLAGS = -g
 INCLUDES = -I../inc -Isrc
-LINK_FLAGS = -ltitan_secure_volume -lstrong-arm
+LINK_FLAGS = -ltitan-secure-volume -lstrong-arm
 RLINK_FLAGS = -O3
 DLINK_FLAGS = -g
 

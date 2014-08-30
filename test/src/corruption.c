@@ -1,7 +1,7 @@
 #include <string.h>
 #include <minunit.h>
-#include <titan_secure_volume/titan_secure_volume.h>
-#include <titan_secure_volume/bsp.h>
+#include <titan-secure-volume/titan-secure-volume.h>
+#include <titan-secure-volume/app.h>
 
 
 void new_ramdisk (size_t len);

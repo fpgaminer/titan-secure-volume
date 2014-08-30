@@ -1,8 +1,8 @@
 /*
  * These functions are platform specific and must be implemented by the application.
  */
-#ifndef __TSV_BSP_H__
-#define __TSV_BSP_H__
+#ifndef __TSV_APP_H__
+#define __TSV_APP_H__
 
 #include <stdlib.h>
 #include <stdint.h>

@@ -7,7 +7,7 @@
 #ifndef __TITAN_SECURE_VOLUME_CIPHERS_H__
 #define __TITAN_SECURE_VOLUME_CIPHERS_H__
 
-#include <titan_secure_volume/titan_secure_volume.h>
+#include <titan-secure-volume/titan-secure-volume.h>
 
 /* 
  * Encryption: Threefish-512-XTS (really, just Threefish tweaked by sectornum||blocknum)

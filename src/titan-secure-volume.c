@@ -3,9 +3,9 @@
 #include <string.h>
 #include "basic_packing.h"
 #include "util.h"
-#include <titan_secure_volume/bsp.h>
+#include <titan-secure-volume/app.h>
 #include "_ciphers.h"
-#include <titan_secure_volume/titan_secure_volume.h>
+#include <titan-secure-volume/titan-secure-volume.h>
 
 
 #define member_size(type, member) sizeof(((type *)0)->member)

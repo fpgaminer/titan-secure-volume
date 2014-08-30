@@ -2,7 +2,7 @@
 #define __TSV_UTIL_H__
 
 #include <stdlib.h>
-#include <titan_secure_volume/bsp.h>
+#include <titan-secure-volume/app.h>
 
 
 #ifndef MIN

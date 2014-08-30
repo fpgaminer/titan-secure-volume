@@ -1,8 +1,8 @@
 # Inspired by (https://github.com/mbcrawfo/GenericMakefile)
 
-BIN_NAME=libtitan_secure_volume.a
+BIN_NAME=libtitan-secure-volume.a
 C_SOURCES = \
-	src/titan_secure_volume.c \
+	src/titan-secure-volume.c \
 	src/_ciphers.c
 
 
